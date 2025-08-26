@@ -1,110 +1,225 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+// app/(tabs)/explore.tsx
+import React from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { StatusBar } from 'expo-status-bar';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+export default function SettingsScreen() {
+  const checkStorageUsage = async () => {
+    try {
+      const mbtilesPath = `${FileSystem.documentDirectory}kolkata_10km.mbtiles`;
+      const dbPath = `${FileSystem.documentDirectory}kolkata_map.db`;
+      
+      let totalSize = 0;
+      let fileDetails = '';
 
-export default function TabTwoScreen() {
+      const mbtilesInfo = await FileSystem.getInfoAsync(mbtilesPath);
+      if (mbtilesInfo.exists) {
+        totalSize += mbtilesInfo.size;
+        fileDetails += `MBTiles: ${(mbtilesInfo.size / 1024 / 1024).toFixed(2)} MB\n`;
+      }
+
+      const dbInfo = await FileSystem.getInfoAsync(dbPath);
+      if (dbInfo.exists) {
+        totalSize += dbInfo.size;
+        fileDetails += `Database: ${(dbInfo.size / 1024 / 1024).toFixed(2)} MB\n`;
+      }
+
+      if (totalSize === 0) {
+        Alert.alert('Storage Usage', 'No offline maps are currently stored.');
+      } else {
+        Alert.alert(
+          'Storage Usage', 
+          `Total storage used: ${(totalSize / 1024 / 1024).toFixed(2)} MB\n\n${fileDetails}`
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not check storage usage');
+    }
+  };
+
+  const clearCache = async () => {
+    Alert.alert(
+      'Clear Cache',
+      'This will remove temporary files but keep your offline maps. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          onPress: async () => {
+            try {
+              // Clear any temporary files
+              const tempFiles = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory || '');
+              const filesToDelete = tempFiles.filter(file => 
+                file.endsWith('.zip') || 
+                file.endsWith('.tmp') ||
+                file.includes('temp')
+              );
+              
+              for (const file of filesToDelete) {
+                await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${file}`, { idempotent: true });
+              }
+              
+              Alert.alert('Success', 'Cache cleared successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Could not clear cache');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <ScrollView style={styles.container}>
+      <StatusBar style="auto" />
+      
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.subtitle}>Manage your offline maps and app settings</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Storage Management</Text>
+        
+        <TouchableOpacity style={styles.settingItem} onPress={checkStorageUsage}>
+          <Text style={styles.settingLabel}>📊 Check Storage Usage</Text>
+          <Text style={styles.settingDescription}>View how much space offline maps are using</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.settingItem} onPress={clearCache}>
+          <Text style={styles.settingLabel}>🧹 Clear Cache</Text>
+          <Text style={styles.settingDescription}>Remove temporary files and free up space</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About Offline Maps</Text>
+        
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>📍 Coverage Area</Text>
+          <Text style={styles.infoDescription}>
+            Kolkata metropolitan area with 10km radius from city center
+          </Text>
+        </View>
+
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>🗺 Map Data</Text>
+          <Text style={styles.infoDescription}>
+            High-quality offline map tiles for navigation without internet
+          </Text>
+        </View>
+
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>💰 Cost</Text>
+          <Text style={styles.infoDescription}>
+            Completely free - no API keys or subscriptions required
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>App Information</Text>
+        
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>📱 Version</Text>
+          <Text style={styles.infoDescription}>1.0.0</Text>
+        </View>
+
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>🛠 Technology</Text>
+          <Text style={styles.infoDescription}>
+            React Native • Expo • MBTiles • SQLite
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          This app uses OpenStreetMap data and provides offline mapping capabilities for the Kolkata area.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  header: {
+    backgroundColor: '#fff',
+    padding: 20,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+  },
+  section: {
+    backgroundColor: '#fff',
+    marginTop: 20,
+    paddingVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  settingItem: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  infoItem: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  infoLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 4,
+  },
+  infoDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  footer: {
+    padding: 20,
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
